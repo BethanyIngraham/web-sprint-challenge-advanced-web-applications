@@ -33,7 +33,9 @@ export default function App() {
     // and a message saying "Goodbye!" should be set in its proper state.
     // In any case, we should redirect the browser back to the login screen,
     // using the helper above.
-  
+    localStorage.removeItem('token')
+    setMessage('Goodbye!')
+    redirectToLogin()
   }
 
   const login = ({ username, password }) => {
@@ -82,7 +84,9 @@ export default function App() {
     setSpinnerOn(true)
     const token = localStorage.getItem('token')
     fetch(articlesUrl, {
-      headers: {Authorization: token}
+      headers: {
+        Authorization: token
+      }
     })
     .then(res => {
       if(!res.ok) {
@@ -109,16 +113,85 @@ export default function App() {
     // The flow is very similar to the `getArticles` function.
     // You'll know what to do! Use log statements or breakpoints
     // to inspect the response from the server.
+    const token = localStorage.getItem('token')
+    fetch(articlesUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+       title: article.title,
+       text: article.text,
+       topic: article.topic
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: token
+      }
+    })
+    .then(res => {
+      if(!res.ok) {
+        throw new Error(`Status, ${res.status}`)
+      }
+      return res.json()
+    })
+    .then(data => {
+      setArticles(articles => [...articles, data.article])
+      setMessage(data.message)
+      setCurrentArticleId(null)
+    })
+    .catch(err => console.log('Something went wrong POSTing article',err))
   }
 
   const updateArticle = ({ article_id, article }) => {
     // ✨ implement
     // You got this!
+    const token = localStorage.getItem('token')
+    fetch(`${articlesUrl}/${article_id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        title: article.title,
+        text: article.text,
+        topic: article.topic
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: token
+      }
+    })
+    .then(res => {
+      return res.json()
+    })
+    .then(data => {
+      setArticles(articles =>
+        articles.map(art => article_id === art.article_id ? article : art)
+      )
+      setMessage(data.message)
+      setCurrentArticleId(null)
+    })
+    .catch(err => console.log(err))
   }
 
   const deleteArticle = article_id => {
     // ✨ implement
-    
+    const token = localStorage.getItem('token')
+    fetch(`${articlesUrl}/${article_id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: token
+      }
+    })
+    .then(res => {
+      if(!res.ok) {
+        throw new Error(`Something went wrong DELETing article, ${res.status}`)
+      }
+      return res.json()
+    })
+    .then(data => {
+      setArticles(articles => 
+        articles.filter(article => article.article_id !== article_id)
+      )
+      setMessage(data.message)
+    })
+    .catch(err => console.log(err))
   }
 
   return (
@@ -138,10 +211,10 @@ export default function App() {
           <Route path="articles" element={
             <>
               <ArticleForm 
-               // currentArticle={currentArticleId && articles.find(art => art.article_id === currentArticleId)}
-               // setCurrentArticleId={setCurrentArticleId}  
-               // postArticle
-               // updateArticle
+              currentArticle={currentArticleId && articles.find(art => art.article_id === currentArticleId)}
+              setCurrentArticleId={setCurrentArticleId}  
+              postArticle={postArticle}
+              updateArticle={updateArticle}
               />
               <Articles 
               articles={articles} 
